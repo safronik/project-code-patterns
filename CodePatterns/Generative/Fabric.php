@@ -2,6 +2,8 @@
 
 namespace Safronik\CodePatterns\Generative;
 
+use Safronik\CodePatterns\Structural\DTO;
+
 /**
  * Fabric
  *
