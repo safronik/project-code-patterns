@@ -1,0 +1,24 @@
+{
+    "name": "safronik/code-patterns",
+    "type": "library",
+    "description": "Implementation of different code patterns mainly could be used as traits",
+    "keywords": ["template","code","pattern"],
+    "homepage": "https://github.com/Safronik/project-code-patterns",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Roman Safronov",
+            "email": "r.safronik@yandex.ru",
+            "homepage": "https://github.com/Safronik/",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Safronik\\CodePatterns\\": "CodePatterns"
+        }
+    }
+}
