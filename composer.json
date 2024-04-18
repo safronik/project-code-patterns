@@ -4,7 +4,7 @@
     "description": "Implementation of different code patterns mainly could be used as traits",
     "keywords": ["template","code","pattern"],
     "homepage": "https://github.com/Safronik/project-code-patterns",
-    "license": "MIT",
+    "license": "https://mit-license.org/",
     "authors": [
         {
             "name": "Roman Safronov",
@@ -14,7 +14,7 @@
         }
     ],
     "require": {
-        "php": ">=8.0.0"
+        "php": ">=8.2"
     },
     "autoload": {
         "psr-4": {
