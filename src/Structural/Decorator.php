@@ -2,6 +2,8 @@
 
 namespace Safronik\CodePatterns\Structural;
 
+use Safronik\CodePatterns\Exceptions\DecoratorException;
+
 /**
  * Decorator
  *
@@ -33,7 +35,7 @@ trait Decorator
     public function setCallback( string $method, callable $callback, string $order = 'before' ): void
     {
         in_array( $order, ['before', 'after'], true )
-            || throw new \Exception("Order $order is not allowed");
+            || throw new DecoratorException("Order $order is not allowed");
             
         $this->callbacks[ $method ][ $order ] = $callback;
     }

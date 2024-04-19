@@ -2,6 +2,8 @@
 
 namespace Safronik\CodePatterns\Generative;
 
+use Safronik\CodePatterns\Exceptions\RegistryException;
+
 /**
  * Registry
  *
@@ -33,7 +35,7 @@ trait Registry
     {
         ! $allow_replace
             || $this->isRegistryKeyExists( $key )
-            || throw new \Exception("No $key found in Registry");
+            || throw new RegistryException("No $key found");
 
         $this->storage[ $key ] = $item;
     }
@@ -41,7 +43,7 @@ trait Registry
     public function getFromRegistry( $key ): mixed
     {
         $this->isRegistryKeyExists( $key )
-            || throw new \Exception("No $key found in Registry");
+            || throw new RegistryException("No $key found");
         
         return $this->storage[ $key ];
     }

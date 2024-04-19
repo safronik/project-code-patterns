@@ -2,6 +2,8 @@
 
 namespace Safronik\CodePatterns\Structural;
 
+use Safronik\CodePatterns\Exceptions\CompositeException;
+
 /**
  * Singleton
  *
@@ -16,7 +18,7 @@ trait Composite
             current( $this->$collection ),
             $method
         )
-             || throw new \Exception("Method $method is not available for collection $collection");
+             || throw new CompositeException("Method $method is not available for collection $collection");
         
         $method_results = [];
         foreach( $this->$collection as $item ){

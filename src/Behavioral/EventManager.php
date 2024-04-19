@@ -11,12 +11,18 @@
 
 namespace Safronik\CodePatterns\Behavioral;
 
+use Safronik\CodePatterns\Exceptions\EventManagerException;
 use Safronik\CodePatterns\Generative\Singleton;
-use Safronik\Exceptions\EventException;
 
 /**
- * EventManager::hook()
+ * Event manager
+ *
+ *
+ *
+ * @author  Roman safronov
+ * @version 1.0.0
  */
+
 class EventManager
 {
     use Singleton;
@@ -34,70 +40,70 @@ class EventManager
         self::getInstance()->create( $type, $event, $callback );
     }
     
-    public static function filterInput( string $class, $event, callable $callback ): void
+    public static function filterInput( string $class, string $event, callable $callback ): void
     {
         self::getInstance()->create( 'filter_input', "$class:$event", $callback );
     }
     
-    public static function before( string $class, $event, callable $callback ): void
+    public static function before( string $class, string $event, callable $callback ): void
     {
         self::getInstance()->create( 'before', "$class:$event", $callback );
     }
     
-    public static function after( string $class, $event, callable $callback ): void
+    public static function after( string $class, string $event, callable $callback ): void
     {
         self::getInstance()->create( 'after', "$class:$event", $callback );
     }
     
-    public static function filterOutput( string $class, $event, callable $callback ): void
+    public static function filterOutput( string $class, string $event, callable $callback ): void
     {
         self::getInstance()->create( 'filter_output', "$class:$event", $callback );
     }
     
-    private function create( $type, $event, callable $callback, int $priority = 200 )
+    private function create( string $type, string $event, callable $callback, int $priority = 200 )
     {
         ! in_array( $type, $this->allowed_types, true)
-            && throw new EventException('EventManager type is not valid: ' . $type );
+            && throw new EventManagerException( 'EventManager type is not valid: ' . $type );
         
         $this->events[ $event ][ $type ][ $priority ] = $callback;
     }
     
-    public static function triggerFilterInput( $event, $arguments ): mixed
+    public static function triggerFilterInput( string $event, array $arguments ): mixed
     {
         return self::getInstance()->exists( 'filter_input', $event )
             ? self::getInstance()->trigger( 'filter_input', $event, ...$arguments )
             : $arguments;
     }
     
-    public static function triggerBefore( $event ): void
+    public static function triggerBefore( string $event ): void
     {
         if( self::getInstance()->exists( 'before', $event ) ){
             self::getInstance()->trigger( 'before', $event );
         }
     }
     
-    public static function triggerAfter( $event ): void
+    public static function triggerAfter( string $event ): void
     {
         if( self::getInstance()->exists( 'after', $event ) ){
             self::getInstance()->trigger( 'after', $event );
         }
     }
     
-    public static function triggerFilterOutput( $event, $return_value ): mixed
+    public static function triggerFilterOutput( string $event, mixed $return_value ): mixed
     {
         return self::getInstance()->exists( 'filter_output', $event )
             ? self::getInstance()->trigger( 'filter_output', $event, $return_value )
             : $return_value;
     }
     
-    public static function triggerCustom( $event ): void
+    public static function triggerCustom( string $event ): void
     {
         if( self::getInstance()->exists( 'custom', $event ) ){
             self::getInstance()->trigger( 'custom', $event );
         }
     }
     
-    private function exists( string $type, $event ): bool
+    private function exists( string $type, string $event ): bool
     {
         return isset( $this->events[ $event ][ $type ] );
     }

@@ -3,7 +3,7 @@
 namespace Safronik\CodePatterns\Generative;
 
 use Safronik\CodePatterns\ContainerItem;
-use Safronik\CodePatterns\Interfaces\Serviceable;
+use Safronik\CodePatterns\Exceptions\ContainerException;
 use Safronik\Helpers\ReflectionHelper;
 
 /**
@@ -46,19 +46,19 @@ trait Container
     public static function get( string $alias, mixed $params = [] ): mixed
     {
         static::isInitialized()
-            || throw new \Exception( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
+            || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
         
         $service_classname = static::getInstance()->aliases[ $alias ] ?? $alias;
         
         return isset( static::getInstance()->services[ $service_classname ] )
             ? static::getInstance()->services[ $service_classname ]( $params )
-            : throw new \Exception( "ContainerItem '$alias' not found container: '" . static::class . "'" );
+            : throw new ContainerException( "ContainerItem '$alias' not found container: '" . static::class . "'" );
     }
     
     public static function has( string $alias ): bool
     {
         static::isInitialized()
-            || throw new \Exception( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
+            || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
         
         $service_classname = self::getInstance()->aliases[ $alias ] ?? $alias;
         
@@ -85,7 +85,7 @@ trait Container
                 // Append gateway as the first parameter
                 $this->filterInitParameters( $service_classname, $params );
                 
-                /** @var Singleton|Serviceable $service_classname  */
+                /** @var Singleton|mixed $service_classname  */
                 // Create new object or get an instance in case of singleton
                 return $using_singleton
                     ? $service_classname::getInstance( ...$params )
