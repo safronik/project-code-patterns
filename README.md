@@ -12,7 +12,7 @@
 
 ## About
 
-This is a package contains few main code patterns you can use to build your own project. You are free to use anywhere in any way you want (MIT License).
+This package contains few main code patterns you can use to build your own project. You are free to use anywhere in any way you want (MIT License).
 
 ## Installation
 
