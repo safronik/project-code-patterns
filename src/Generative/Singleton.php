@@ -41,9 +41,9 @@ trait Singleton
      *
      * @return void
      */
-    public static function initialize( ...$params ): void
+    public static function initialize( ...$parameters ): void
     {
-        self::getInstance( ...$params );
+        self::getInstance( ...$parameters );
     }
     
     /**
