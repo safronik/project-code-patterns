@@ -21,34 +21,34 @@ trait Registry
 {
     private array $storage = [];
     
-    public function fillRegistry( $storage ): void
+    public function fill( $storage ): void
     {
         $this->storage = $storage;
     }
     
-    public function isRegistryKeyExists( $key ): bool
+    public function isExists( $key ): bool
     {
         return isset( $this->storage[ $key ] );
     }
     
-    public function pushToRegistry( $key, $item, $allow_replace = true ): void
+    public function push( $key, $item, $replace = true ): void
     {
-        ! $allow_replace
-            || $this->isRegistryKeyExists( $key )
+        ! $replace
+            || $this->isExists( $key )
             || throw new RegistryException("No $key found");
 
         $this->storage[ $key ] = $item;
     }
     
-    public function getFromRegistry( $key ): mixed
+    public function get( $key ): mixed
     {
-        $this->isRegistryKeyExists( $key )
+        $this->isExists( $key )
             || throw new RegistryException("No $key found");
         
         return $this->storage[ $key ];
     }
     
-    public function deleteFromRegistry( $key ): void
+    public function delete( $key ): void
     {
         unset( $this->storage[ $key ] );
     }
