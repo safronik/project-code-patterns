@@ -11,7 +11,7 @@ use Safronik\Helpers\ReflectionHelper;
  *
  * Features:
  * - Lazy load
- * - Automatic get available classes
+ * - Automatically get available classes
  * - Parameters passing
  * - Parameter filter
  * - Aliases
@@ -20,84 +20,98 @@ use Safronik\Helpers\ReflectionHelper;
  * @author  Roman safronov
  * @version 1.0.0
  */
-
 trait Container
 {
     use Singleton;
     
-    protected array $services = [];
+    protected array $item = [];
     protected array $aliases  = [];
     
     /**
      * Adds a gateway as a first parameter to the class parameters constructor
      *
-     * @param mixed $service
+     * @param mixed $item
      * @param array $params
      *
      * @return void
      */
-    abstract protected function filterInitParameters( mixed $service, array &$params ): void;
+    abstract protected function filterInitParameters( mixed $item, array &$params ): void;
     
-    public function __construct( $services )
+    public function __construct( $items )
     {
-        $this->appendBulk( $services );
+        $this->appendBulk( $items );
     }
-    
+
+    /**
+     * Get an item from the container
+     *
+     * @param string $alias
+     * @param mixed $params
+     * @return mixed
+     * @throws ContainerException
+     */
     public static function get( string $alias, mixed $params = [] ): mixed
     {
         static::isInitialized()
             || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
         
-        $service_classname = static::getInstance()->aliases[ $alias ] ?? $alias;
+        $item_classname = static::getInstance()->aliases[ $alias ] ?? $alias;
         
-        return isset( static::getInstance()->services[ $service_classname ] )
-            ? static::getInstance()->services[ $service_classname ]( $params )
+        return isset( static::getInstance()->items[ $item_classname ] )
+            ? static::getInstance()->items[ $item_classname ]( $params )
             : throw new ContainerException( "ContainerItem '$alias' not found container: '" . static::class . "'" );
     }
-    
+
+    /**
+     * Check if the item exists in the container
+     *
+     * @param string $alias
+     * @return bool
+     * @throws ContainerException
+     */
     public static function has( string $alias ): bool
     {
         static::isInitialized()
             || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
         
-        $service_classname = self::getInstance()->aliases[ $alias ] ?? $alias;
+        $item_classname = self::getInstance()->aliases[ $alias ] ?? $alias;
         
-        return isset( self::getInstance()->services[ $service_classname ] );
+        return isset( self::getInstance()->items[ $item_classname ] );
     }
     
-    protected function appendBulk( array $services ): void
+    protected function appendBulk( array $items ): void
     {
-        foreach( $services as $alias => $service_classname){
-            if( class_exists( $service_classname ) ){
-                $this->append( $service_classname, is_string( $alias ) ? $alias : null );
+        foreach( $items as $alias => $item_classname){
+            if( class_exists( $item_classname ) ){
+                $this->append( $item_classname, is_string( $alias ) ? $alias : null );
             }
         }
     }
     
-    private function append( string $service_classname, string|null $alias = null ): void
+    private function append( string $item_classname, string|null $alias = null ): void
     {
-        $this->addAlias( $alias, $service_classname );
+        $this->addAlias( $alias, $item_classname );
         
-        $using_singleton                      = ReflectionHelper::isClassUseTrait( $service_classname, Singleton::class );
-        $this->services[ $service_classname ] =
-            function( $params ) use ( $using_singleton, $service_classname ){
+        $using_singleton                      = ReflectionHelper::isClassUseTrait( $item_classname, Singleton::class );
+        $this->items[ $item_classname ] =
+            function( $params ) use ( $using_singleton, $item_classname ){
             
                 // Append gateway as the first parameter
-                $this->filterInitParameters( $service_classname, $params );
+                $this->filterInitParameters( $item_classname, $params );
                 
-                /** @var Singleton|mixed $service_classname  */
+                /** @var Singleton|mixed $item_classname  */
                 // Create new object or get an instance in case of singleton
                 return $using_singleton
-                    ? $service_classname::getInstance( ...$params )
-                    : new $service_classname( ...$params );
+                    ? $item_classname::getInstance( ...$params )
+                    : new $item_classname( ...$params );
             };
     }
     
-    private function addAlias( string|null $alias, string|ContainerItem $service ): void
+    private function addAlias( string|null $alias, string|ContainerItem $item ): void
     {
-        $alias = $alias ?? $service::getAlias();
+        $alias = $alias ?? $item::getAlias();
         if( $alias ){
-            $this->aliases[ $alias ] = $service;
+            $this->aliases[ $alias ] = $item;
         }
     }
     
@@ -112,7 +126,7 @@ trait Container
      *
      * @return array
      */
-    protected function getAvailable( string $directory, string $namespace, ?string $classname_contains = null ): array
+    protected function getFromDirectory( string $directory, string $namespace, ?string $classname_contains = null ): array
     {
         // Get classes
         $classes = ReflectionHelper::getClassesFromDirectory(
