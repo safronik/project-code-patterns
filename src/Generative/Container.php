@@ -44,11 +44,6 @@ trait Container
 
     /**
      * Get an item from the container
-     *
-     * @param string $alias
-     * @param mixed $params
-     * @return mixed
-     * @throws ContainerException
      */
     public static function get( string $alias, mixed $params = [] ): mixed
     {
@@ -64,10 +59,6 @@ trait Container
 
     /**
      * Check if the item exists in the container
-     *
-     * @param string $alias
-     * @return bool
-     * @throws ContainerException
      */
     public static function has( string $alias ): bool
     {

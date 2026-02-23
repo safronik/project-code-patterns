@@ -2,6 +2,7 @@
 
 namespace Safronik\CodePatterns\Structural;
 
+use ReflectionClass;
 use ReflectionException;
 use Safronik\CodePatterns\Exceptions\ContainerException;
 use Safronik\CodePatterns\Generative\Singleton;
@@ -19,12 +20,10 @@ use Safronik\Helpers\ReflectionHelper;
  * - Aliases (under construction)
  *
  * @author  Roman safronov
- * @version 1.0.0
+ * @version 1.0.1
  */
 class DI
 {
-    use Singleton;
-    
     private array $class_map;
     private array $interface_map;
     
@@ -39,104 +38,27 @@ class DI
      * - Resolve their dependencies
      * - Save them to class map
      *
-     * @param string $directory
-     * @param string $namespace
-     *
-     * @return array
      * @throws ReflectionException
      */
-    public static function getClassMapForDirectory( string $directory, string $namespace = '\\' ): array
+    public function createDependencyMapForDirectory( string $directoryToScan, string $directoryNamespace ): array
     {
-        $classes   = self::getClassesFromDirectory( $directory, $namespace );
+        $classes   = self::getClassesFromDirectory( $directoryToScan, $directoryNamespace );
         $class_map = [];
         
         foreach( $classes as $class ){
-            $reflection  = new \ReflectionClass( $class );
+            $reflection  = new ReflectionClass( $class );
+            
             if( $reflection->isInterface() || $reflection->isTrait() ){
                 continue;
             }
-
-            $class_map[ '\\' . $class ] = self::resolveClassDependencies( $class, $reflection );
+            
+            $class_map[ '\\' . $class ]['constructor']  = static::getConstructor( $class );
+            $class_map[ '\\' . $class ]['dependencies'] = static::getDependencies( $reflection );
         }
         
         return $class_map;
     }
-
-    /**
-     * Set parameters for the class
-     * with() analog
-     *
-     * @param string $class
-     * @param array $init_parameters
-     * @return self
-     * @throws ReflectionException
-     */
-    public static function setParametersFor( string $class, array $init_parameters ): self
-    {
-        $di_container                             = self::getInstance();
-        $item                                     = $di_container->class_map[ '\\' . $class ] ?? self::resolveClassDependencies( $class, new \ReflectionClass( $class ) );
-        $item['dependencies']                     = $di_container->standardizePassedParameters( $init_parameters ) + $item['dependencies'];
-        $di_container->class_map[ '\\' . $class ] = $item;
-
-        return $di_container;
-    }
-
-    /**
-     * Construct and return an instance of the class
-     *
-     * @param string $class
-     * @param array $params
-     * @return mixed
-     * @throws ContainerException
-     * @throws ReflectionException
-     */
-    public static function get( string $class, array $params = [] ): mixed
-    {
-        /** @var Singleton $class */
-
-        static::isInitialized()
-        || throw new ContainerException( 'DI-Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
-
-        // static::getInstance()->isInClassMap( $class )
-        //     || throw new ContainerException( "$class is not found in DI-container" );
-
-        // Dependency is a singleton and already initialized, no need to create new
-        if( ReflectionHelper::isClassUseTrait( $class, Singleton::class ) && $class::isInitialized() ){
-            return $class::getInstance();
-        }
-
-        $container = static::getInstance();
-
-        if( ! $container->isInClassMap( $class ) ){
-            $container->class_map[ '\\' . $class ] = self::resolveClassDependencies( $class, new \ReflectionClass( $class ) );
-            // @todo save dependency
-        }
-
-        $item = $container->class_map[ '\\' . $class ];
-
-        $item['dependencies'] = $container->standardizePassedParameters( $params ) + $item['dependencies'];
-
-        try{
-            $construct_parameters = [];
-            foreach( $item['dependencies'] as $name => $dependency ){
-
-                if( isset( $dependency['value'] ) ){
-                    $construct_parameters[ $name ] = $dependency['value'];
-
-                }elseif( $dependency['is_interface'] ){
-                    $construct_parameters[ $name ] = static::get($container->getByInterface( $dependency['type'] ) );
-
-                }elseif( $dependency['is_class'] ){
-                    $construct_parameters[ $name ] = static::get( $dependency['type'] );
-                }
-            }
-        }catch( ContainerException $exception ){
-            throw new ContainerException( "Couldn't resolve dependencies for $class: " . $exception->getMessage() );
-        }
-
-        return $item['constructor']( $construct_parameters );
-    }
-
+    
     /**
      * Returns an array of found classes in the directory corresponding conditions
      *
@@ -175,19 +97,38 @@ class DI
         
         return $found;
     }
-    
-    private static function resolveClassDependencies( string $class, \ReflectionClass $reflection ): array
+
+    private static function getInfo( string $class, ReflectionClass $reflection ): array
     {
         return [
-            'constructor'  => static fn( array $parametes = [] ) =>
-                ReflectionHelper::isClassUseTrait( $class, Singleton::class )
-                    ? $class::getInstance( ...$parametes )
-                    : new $class( ...$parametes ),
-            'dependencies' => self::getClassDependencies( $reflection ),
+            'constructor'  => static::getConstructor( $class ),
+            'dependencies' => static::getDependencies( $reflection ),
         ];
     }
-    
-    private static function getClassDependencies( \ReflectionClass $reflection ): array
+
+    /**
+     * Gets class constructor callback
+     */
+    private static function getConstructor( string $class ): callable
+    {
+        return static fn( array $parameters = [] ) =>
+                ReflectionHelper::isClassUseTrait( $class, Singleton::class ) && method_exists( $class, 'getInstance')
+                    ? $class::getInstance( ...$parameters )
+                    : new $class( ...$parameters );
+    }
+
+    /**
+     * Gets class dependencies by its reflection
+     *  with such info as:
+     *  - type
+     *  - value
+     *  - optional
+     *  - is_class
+     *  - is_interface
+     *
+     * @return array of dependencies
+     */
+    private static function getDependencies( ReflectionClass $reflection ): array
     {
         $dependencies = [];
         
@@ -198,12 +139,15 @@ class DI
         foreach( $reflection->getConstructor()?->getParameters() ?? [] as $parameter ){
             
             $type = $parameter->getType();
-            $type = is_object( $type ) && method_exists( $type, 'getName' )
+
+            $type = $type && is_object( $type ) && method_exists( $type, 'getName' )
                 ? $type->getName()
                 : 'unknown';
+
             $type = in_array( $type, [ 'self', 'static' ], true )
                 ? $reflection->getName()
                 : $type;
+
             $dependencies[ $parameter->getName() ] = [
                 'type'         => $type,
                 'value'        => null,
@@ -216,6 +160,70 @@ class DI
         return $dependencies;
     }
 
+    /**
+     * DI Constructor
+     *
+     * @param string $class  Class name to create
+     * @param mixed  $params Arguments for class constructor
+     *
+     * @throws ContainerException
+     * @throws ReflectionException
+     */
+    public function get( string $class, mixed $params = [] ): mixed
+    {
+        // static::getInstance()->isInClassMap( $class )
+        //     || throw new ContainerException( "$class is not found in DI-container" );
+        
+        // Dependency is a singleton and already initialized, no need to create new
+        if( ReflectionHelper::isClassUseTrait( $class, Singleton::class ) && $class::isInitialized() ){
+            return $class::getInstance();
+        }
+
+        if( ! $this->isInClassMap( $class ) ){
+            $this->class_map[ '\\' . $class ] = self::getInfo( $class, new ReflectionClass( $class ) );
+        }
+        
+        $item                 = $this->class_map[ '\\' . $class ];
+        $item['dependencies'] = $this->standardizePassedParameters( $params ) + ($item['dependencies'] ?? []);
+
+        // Resolving arguments and dependencies
+        try{
+            $construct_parameters = [];
+            foreach( $item['dependencies'] as $name => $dependency ){
+
+                // Value passed, pass it to constructor
+                if( isset( $dependency['value'] ) ){
+                    $construct_parameters[ $name ] = $dependency[ 'value' ];
+
+                // No value passed and argument is optional
+                }elseif( $dependency['optional'] ){
+                    continue;
+
+                // No value passed, argument is obligatory, type is interface. Recursively make it using the interface map from config
+                }elseif( $dependency['is_interface'] ){
+                    $construct_parameters[ $name ] = static::get($this->getByInterface( $dependency['type'] ) );
+
+                // No value passed, argument is obligatory, type is class. Recursively make it
+                }elseif( $dependency['is_class'] ){
+                    $construct_parameters[ $name ] = static::get( $dependency['type'] );
+                }
+            }
+        }catch( ContainerException $exception ){
+            throw new ContainerException( "Couldn't resolve dependencies for $class: " . $exception->getMessage() );
+        }
+
+        // Call constructor
+        return $item['constructor']( $construct_parameters );
+    }
+    
+    public function setParametersFor( string $class, array $arguments ): void
+    {
+        $item                 = $this->class_map[ '\\' . $class ] ?? self::getInfo( $class, new ReflectionClass( $class ) );
+        $item['dependencies'] = $this->standardizePassedParameters( $arguments ) + $item[ 'dependencies'];
+
+        $this->class_map[ '\\' . $class ] = $item;
+    }
+    
     private function getByInterface( string $interface, mixed $params = [] ): mixed
     {
         isset( $this->interface_map[ $interface ] )
@@ -224,21 +232,21 @@ class DI
         return $this->interface_map[ $interface ];
     }
     
-    private function standardizePassedParameters( $parameters ): array
+    private function standardizePassedParameters( array $parameters ): array
     {
-        $standardize_parameters = [];
-        
-        foreach( $parameters as $name => $parameter ){
-            $standardize_parameters[ $name ] = [
-                'value' => $parameter,
-            ];
-        }
-        
-        return $standardize_parameters;
+        return array_map(
+            static fn( $parameter ) => [ 'value' => $parameter, ],
+            $parameters
+        );
     }
     
     private function isInClassMap( $class ): bool
     {
         return isset( $this->class_map[ '\\' . $class ] );
+    }
+
+    public static function use( $param )
+    {
+
     }
 }

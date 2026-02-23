@@ -2,7 +2,7 @@
 
 namespace Safronik\CodePatterns\Structural;
 
-use Exception;
+use Safronik\Core\Exceptions\Exception;
 
 /**
  * Class Hydrator
@@ -18,7 +18,7 @@ trait Hydrator
     {
         if( $input instanceof DTO ){
             $this->hydrateFromDTO( $input );
-        }elseif( is_object( $input ) ){
+        }elseif( is_object($input) ){
             $this->hydrateFromObject( $input );
         }else{
             $this->hydrateFromArray( $input );
@@ -26,12 +26,12 @@ trait Hydrator
     }
 
     /**
-     * @param DTO $input
-     * @return void
-     * @throws Exception
      * @todo implement
      * Hydrate object properties from DTO
      *
+     * @param DTO $input
+     * @return void
+     * @throws Exception
      */
     public function hydrateFromDTO( DTO $input ): void
     {

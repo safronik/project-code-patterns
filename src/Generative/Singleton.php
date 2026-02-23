@@ -13,7 +13,7 @@ trait Singleton
     /**
      * @var mixed
      */
-    private static self $instance;
+    protected static self $instance;
     
     // Constructor is not allowed
     public function __clone() {}
