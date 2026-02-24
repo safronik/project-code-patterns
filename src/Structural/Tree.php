@@ -2,6 +2,8 @@
 
 namespace Safronik\CodePatterns\Structural;
 
+use Safronik\CodePatterns\Behavioral\FluidInterface;
+
 trait Tree {
 
 	use FluidInterface;

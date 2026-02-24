@@ -1,6 +1,6 @@
 <?php
 
-namespace Safronik\CodePatterns\Custom;
+namespace Safronik\CodePatterns\Generative;
 
 /**
  * MultitonByClassname
@@ -15,7 +15,7 @@ namespace Safronik\CodePatterns\Custom;
 trait MultitonByClassname
 {
     private static array $instances = [];
-    
+
     public static function getInstance( ...$params ): static
     {
         if ( ! isset(static::$instances[ static::class ]) ) {
@@ -24,7 +24,7 @@ trait MultitonByClassname
 
         return static::$instances[ static::class ];
     }
-    
+
     public static function isInitialized(): bool
     {
         return isset( static::$instances[ static::class ] );

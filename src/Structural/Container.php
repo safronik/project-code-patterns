@@ -1,9 +1,10 @@
 <?php
 
-namespace Safronik\CodePatterns\Generative;
+namespace Safronik\CodePatterns\Structural;
 
 use Safronik\CodePatterns\ContainerItem;
 use Safronik\CodePatterns\Exceptions\ContainerException;
+use Safronik\CodePatterns\Generative\Singleton;
 use Safronik\Helpers\ReflectionHelper;
 
 /**
@@ -23,10 +24,10 @@ use Safronik\Helpers\ReflectionHelper;
 trait Container
 {
     use Singleton;
-    
+
     protected array $item = [];
     protected array $aliases  = [];
-    
+
     /**
      * Adds a gateway as a first parameter to the class parameters constructor
      *
@@ -36,7 +37,7 @@ trait Container
      * @return void
      */
     abstract protected function filterInitParameters( mixed $item, array &$params ): void;
-    
+
     public function __construct( $items )
     {
         $this->appendBulk( $items );
@@ -49,9 +50,9 @@ trait Container
     {
         static::isInitialized()
             || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
-        
+
         $item_classname = static::getInstance()->aliases[ $alias ] ?? $alias;
-        
+
         return isset( static::getInstance()->items[ $item_classname ] )
             ? static::getInstance()->items[ $item_classname ]( $params )
             : throw new ContainerException( "ContainerItem '$alias' not found container: '" . static::class . "'" );
@@ -64,12 +65,12 @@ trait Container
     {
         static::isInitialized()
             || throw new ContainerException( 'Container ' . static::class . ' is not initialized yet. Please, do so before use it.' );
-        
+
         $item_classname = self::getInstance()->aliases[ $alias ] ?? $alias;
-        
+
         return isset( self::getInstance()->items[ $item_classname ] );
     }
-    
+
     protected function appendBulk( array $items ): void
     {
         foreach( $items as $alias => $item_classname){
@@ -78,18 +79,18 @@ trait Container
             }
         }
     }
-    
+
     private function append( string $item_classname, string|null $alias = null ): void
     {
         $this->addAlias( $alias, $item_classname );
-        
+
         $using_singleton                      = ReflectionHelper::isClassUseTrait( $item_classname, Singleton::class );
         $this->items[ $item_classname ] =
             function( $params ) use ( $using_singleton, $item_classname ){
-            
+
                 // Append gateway as the first parameter
                 $this->filterInitParameters( $item_classname, $params );
-                
+
                 /** @var Singleton|mixed $item_classname  */
                 // Create new object or get an instance in case of singleton
                 return $using_singleton
@@ -97,7 +98,7 @@ trait Container
                     : new $item_classname( ...$params );
             };
     }
-    
+
     private function addAlias( string|null $alias, string|ContainerItem $item ): void
     {
         $alias = $alias ?? $item::getAlias();
@@ -105,7 +106,7 @@ trait Container
             $this->aliases[ $alias ] = $item;
         }
     }
-    
+
     /**
      * Get available classes from the directory with precondition
      * Search only final classes
@@ -127,7 +128,7 @@ trait Container
             recursive      : true,
             filter_callback: 'Safronik\Helpers\ClassHelper::filterFinalClasses'
         );
-        
+
         // Create aliases
         // Example: Safronik\Modules\DBMigrator\DBMigratorModule -> DBMigrator
         $aliases  = array_map(
@@ -139,7 +140,7 @@ trait Container
                 ),
             $classes,
         );
-        
+
         return array_combine( $aliases, $classes );
     }
 
